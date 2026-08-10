@@ -561,4 +561,4 @@ Note that what this action installs for its setup (such as above tools) is consi
 
 ## License
 
-Licensed under [MIT license](LICENSE-MIT)
+Licensed under [MIT license](LICENSE)
