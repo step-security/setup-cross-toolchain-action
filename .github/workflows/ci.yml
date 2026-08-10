@@ -28,14 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@dc24bff2366e8ddeea5e0e4168df3d6f4b93f596 # 2026.8.8
-    permissions:
-      security-events: write # for github/codeql-action/*
-
   test:
-    needs: tidy
-    if: github.actor != 'dependabot[bot]' || matrix.dependabot
+    if: github.actor != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +38,7 @@ jobs:
           # Linux (GNU)
           # rustup target list | grep -F -e '-linux-gnu'
           # rustc --print target-list | grep -F -e '-linux-gnu'
-          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04, dependabot: true }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04 }
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04, package: libc6-dbg } # arm64
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm, package: libc6-dbg } # arm64
@@ -329,8 +323,7 @@ jobs:
         if: matrix.runner == '' && matrix.qemu == '' && matrix.wine == ''
 
   test-container:
-    needs: tidy
-    if: github.actor != 'dependabot[bot]' || matrix.dependabot
+    if: github.actor != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -389,7 +382,6 @@ jobs:
           - x86_64-pc-windows-gnullvm
         # prettier-ignore
         include:
-          - { container: ubuntu:24.04, target: aarch64-unknown-linux-gnu, dependabot: true }
           - { container: debian:13-slim, target: armv5te-unknown-linux-gnueabi, package: libc6-dbg } # armel
           - { container: debian:13-slim, target: arm-unknown-linux-gnueabi, package: libc6-dbg } # armel
           - { container: debian:13-slim, target: armv7-unknown-linux-gnueabi, package: libc6-dbg } # armel
@@ -479,14 +471,12 @@ jobs:
       #     path: /tmp/artifacts/
 
   test-valgrind:
-    needs: tidy
-    if: github.actor != 'dependabot[bot]' || matrix.dependabot
+    if: github.actor != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            dependabot: true
           - target: i686-unknown-linux-gnu
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
@@ -521,3 +511,110 @@ jobs:
       - run: tools/ci/test.sh "${TARGET}" rust-cross-toolchain/docker/test/fixtures/rust
         env:
           TARGET: ${{ matrix.target }}
+
+  test-dependabot:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: rust@nightly
+          fallback: none
+      - run: printf 'QEMU_STRACE=1\n' >>"${GITHUB_ENV}"
+      - uses: ./
+        with:
+          target: aarch64-unknown-linux-gnu
+      - run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
+          retry git clone --depth 1 https://github.com/taiki-e/rust-cross-toolchain.git
+          printf 'CMAKE_POLICY_VERSION_MINIMUM=3.5\n' >>"${GITHUB_ENV}"
+      - run: tools/ci/test.sh "${TARGET}" rust-cross-toolchain/docker/test/fixtures/rust
+        env:
+          TARGET: aarch64-unknown-linux-gnu
+        id: test
+
+  test-container-dependabot:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ubuntu:24.04
+      options: --privileged
+    steps:
+      - name: Install requirements
+        run: |
+          apt-get -o Acquire::Retries=10 -qq update
+          apt-get -o Acquire::Retries=10 -qq -o Dpkg::Use-Pty=0 install -y --no-install-recommends ca-certificates curl
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: rust@nightly
+          fallback: none
+      - run: apt-get -qq -o Dpkg::Use-Pty=0 purge -y curl
+      - uses: ./
+        with:
+          target: aarch64-unknown-linux-gnu
+      - name: Install requirements for test
+        run: |
+          apt-get -o Acquire::Retries=10 -qq update
+          apt-get -o Acquire::Retries=10 -qq -o Dpkg::Use-Pty=0 install -y --no-install-recommends gcc libc6-dev jq make cmake
+      - run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
+          retry git clone --depth 1 https://github.com/taiki-e/rust-cross-toolchain.git
+          printf 'CMAKE_POLICY_VERSION_MINIMUM=3.5\n' >>"${GITHUB_ENV}"
+      - run: tools/ci/test.sh "${TARGET}" rust-cross-toolchain/docker/test/fixtures/rust
+        env:
+          TARGET: aarch64-unknown-linux-gnu
+        id: test
+
+  test-valgrind-dependabot:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: rust@nightly
+          fallback: none
+      - uses: ./
+        with:
+          target: x86_64-unknown-linux-gnu
+          runner: valgrind
+      - run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
+          retry git clone --depth 1 https://github.com/taiki-e/rust-cross-toolchain.git
+          printf 'CMAKE_POLICY_VERSION_MINIMUM=3.5\n' >>"${GITHUB_ENV}"
+      - run: tools/ci/test.sh "${TARGET}" rust-cross-toolchain/docker/test/fixtures/rust
+        env:
+          TARGET: x86_64-unknown-linux-gnu
+        id: test

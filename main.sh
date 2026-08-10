@@ -347,20 +347,24 @@ install_qemu() {
   fi
   printf '::group::Instal QEMU\n'
   # https://github.com/taiki-e/dockerfiles/pkgs/container/qemu-user
-  qemu_user_tag=":${qemu_version}"
+  # Pin default version to digest; user-specified versions use tag only.
   case "${qemu_version}" in
+    11.0) qemu_user_tag="@sha256:993848699ef9ef5f2bcbd02cefcd1459896448d607e5d648d4d814fb01248116" ;;
     8.0)
       case "${qemu_arch}" in
         # Use 8.0.2 instead of 8.0.3 for ppc64{,le}. 8.0.3 is broken for them due to incomplete backport of 8.1 patches.
         ppc64*) qemu_user_tag=@sha256:552a32adda13312fe6a33cf09855ebe46c8de52df927c86f14f727cbe574c7c9 ;;
+        *) qemu_user_tag=":${qemu_version}" ;;
       esac
       ;;
     9.0)
       case "${qemu_arch}" in
         # Use 9.0.2+ds-1 instead of 9.0.2+ds-2 for armeb. 9.0.2+ds-2 is broken for them.
         armeb) qemu_user_tag=@sha256:5f5b065ca1db760f33def2602f4f8468f91fd9b11c48393c5d6cd0553800df82 ;;
+        *) qemu_user_tag=":${qemu_version}" ;;
       esac
       ;;
+    *) qemu_user_tag=":${qemu_version}" ;;
   esac
   # TODO: distribute the latest qemu-user without docker
   install_docker
@@ -507,8 +511,18 @@ install_valgrind() {
   printf '::group::Instal Valgrind\n'
   # TODO: distribute the latest valgrind without docker
   install_docker
-  # https://github.com/taiki-e/dockerfiles/pkgs/container/valgrind
-  retry docker create --name valgrind "ghcr.io/taiki-e/valgrind:${valgrind_version}-${valgrind_arch}-dist"
+  # Pin default version to digest per arch; user-specified versions use tag only.
+  local valgrind_tag="${valgrind_version}-${valgrind_arch}-dist"
+  case "${valgrind_version}-${valgrind_arch}" in
+    3.27.1-amd64) valgrind_tag="@sha256:7d5d6aa724ab8f6306cb9ee8e7273649759fc29ff808fdda35f4c045bb3b4645" ;;
+    3.27.1-arm64) valgrind_tag="@sha256:a56db476605cccc619571816e16814e903867cd748b03bcc3e75dd5bb7b74d14" ;;
+    3.27.1-armhf) valgrind_tag="@sha256:71a8ffda4e8b4b08f537b20a638ade2118ba7a428ff7e9b8b47d4d19587fee68" ;;
+    3.27.1-i386) valgrind_tag="@sha256:0f8f3745babce51d48fd58475679fabac28de5cc91a350e0021ac08bb2779687" ;;
+    3.27.1-ppc64el) valgrind_tag="@sha256:608fff2276deed47f9766448649d09f1baf99bb4849b76f707b252c9bdd87456" ;;
+    3.27.1-riscv64) valgrind_tag="@sha256:6e09495afdf02761bf7da71665911057c5bb36c4c0bb34bfc2474e5f62ef72be" ;;
+    3.27.1-s390x) valgrind_tag="@sha256:ff3cb27e668db481f6b24798d8231c1af2ff867ac7d5d6bd6b3ec2864d811624" ;;
+  esac
+  retry docker create --name valgrind "ghcr.io/taiki-e/valgrind${valgrind_tag}"
   mkdir -p -- .setup-cross-toolchain-action-tmp
   docker cp -- valgrind:/valgrind .setup-cross-toolchain-action-tmp/valgrind
   docker rm -f -- valgrind >/dev/null
@@ -745,7 +759,16 @@ EOF
               x86_64* | aarch64* | arm64*) prefix='64' ;;
             esac
             # Note that due to the Android SDK license, rust-cross-toolchain cannot redistribute sys-img distributed by Google.
+            # SHA1 checksums from https://dl.google.com/android/repository/sys-img/android/sys-img.xml
+            case "${file}" in
+              armeabi-v7a-24_r07.zip) expected_sha1=3454546b4eed2d6c3dd06d47757d6da9f4176033 ;;
+              arm64-v8a-24_r07.zip) expected_sha1=e8ab2e49e4efe4b064232b33b5eeaded61437d7f ;;
+              x86-24_r08.zip) expected_sha1=c1cae7634b0216c0b5990f2c144eb8ca948e3511 ;;
+              x86_64-24_r08.zip) expected_sha1=f6559e1949a5879f31a9662f4f0e50ad60181684 ;;
+              *) bail "unrecognized Android sys-img '${file}'" ;;
+            esac
             retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 -O "https://dl.google.com/android/repository/sys-img/android/${file}"
+            printf '%s  %s\n' "${expected_sha1}" "${file}" | sha1sum -c - || warn "SHA1 checksum mismatch for ${file}; continuing anyway"
             unzip -q "${file}" "${arch}/system.img"
             for bin in "linker${prefix}" sh; do
               _sudo e2cp -p "${arch}/system.img:/bin/${bin}" "/system/bin/"
@@ -1217,6 +1240,13 @@ case "${host}" in
           i?86*) host_arch=i686 ;;
           *) bail "unrecognized host '${host}'" ;;
         esac
+        # SHA256 of llvm-mingw-${toolchain_version}-ucrt-${host_arch}.zip
+        case "${host_arch}" in
+          aarch64) llvm_mingw_sha256=eb9c194a1cc04ba5dfdacce4c68ce7cc686d421d8298a15af5b84e0540f51f44 ;;
+          armv7) llvm_mingw_sha256=71852838b84fe0adf933b9d40f7ef6ea92b3de6abcd08508215937430aee60c3 ;;
+          x86_64) llvm_mingw_sha256=810703594a7e3eea03385b5329c7ea3bd65f5e496b44cf1b68c17ff436d265e7 ;;
+          i686) llvm_mingw_sha256=ffd95d054335963123a170f939afa8391f092f11ad2fcb8205bf7d452832ff64 ;;
+        esac
         canonicalize_windows_path() {
           local t="$1"
           if [[ "${t}" == '/cygdrive/'* ]]; then
@@ -1231,6 +1261,7 @@ case "${host}" in
         (
           cd -- "${HOME}/.setup-cross-toolchain-action"
           retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 -o tmp "https://github.com/mstorsjo/llvm-mingw/releases/download/${toolchain_version}/llvm-mingw-${toolchain_version}-ucrt-${host_arch}.zip"
+          printf '%s  tmp\n' "${llvm_mingw_sha256}" | sha256sum -c - || warn "SHA256 checksum mismatch for llvm-mingw-${toolchain_version}-ucrt-${host_arch}.zip; continuing anyway"
           unzip tmp
           rm -- tmp
         )

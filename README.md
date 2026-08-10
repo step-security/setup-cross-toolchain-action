@@ -1,6 +1,6 @@
-[![StepSecurity Maintained Action](https://raw.githubusercontent.com/step-security/maintained-actions-assets/main/assets/maintained-action-banner.png)](https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions)
-
 # setup-cross-toolchain-action
+
+[![StepSecurity Maintained Action](https://raw.githubusercontent.com/step-security/maintained-actions-assets/main/assets/maintained-action-banner.png)](https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions)
 
 [![release](https://img.shields.io/github/release/step-security/setup-cross-toolchain-action?style=flat-square&logo=github)](https://github.com/step-security/setup-cross-toolchain-action/releases/latest)
 
@@ -562,4 +562,3 @@ Note that what this action installs for its setup (such as above tools) is consi
 ## License
 
 Licensed under [MIT license](LICENSE-MIT)
-
