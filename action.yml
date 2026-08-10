@@ -1,0 +1,38 @@
+name: Setup toolchains for cross compilation and cross testing for Rust
+description: GitHub Action for setup toolchains for cross compilation and cross testing for Rust
+
+inputs:
+  target:
+    description: Target name
+    required: true
+  runner:
+    description: Test runner
+    required: false
+  qemu:
+    description: QEMU version
+    required: false
+  valgrind:
+    description: Valgrind version
+    required: false
+  wine:
+    description: Wine version
+    required: false
+  package:
+    description: Packages to install for target (whitespace or comma separated list)
+    required: false
+
+# Note:
+# - inputs.* should be manually mapped to INPUT_* due to https://github.com/actions/runner/issues/665
+# - For context containing path, use GITHUB_*/RUNNER_* instead of github.*/runner.* due to https://github.com/actions/runner/issues/2185
+runs:
+  using: composite
+  steps:
+    - run: bash --noprofile --norc "${GITHUB_ACTION_PATH:?}/main.sh"
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_RUNNER: ${{ inputs.runner }}
+        INPUT_QEMU: ${{ inputs.qemu }}
+        INPUT_VALGRIND: ${{ inputs.valgrind }}
+        INPUT_WINE: ${{ inputs.wine }}
+        INPUT_PACKAGE: ${{ inputs.package }}
