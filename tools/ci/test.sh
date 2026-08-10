@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: Apache-2.0 OR MIT
+# SPDX-License-Identifier: MIT
 # shellcheck disable=SC2086
 set -CeEuo pipefail
 IFS=$'\n\t'
