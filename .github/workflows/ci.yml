@@ -7,9 +7,6 @@ on:
   push:
     branches:
       - main
-      - dev*
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
 
 env:
@@ -32,22 +29,22 @@ concurrency:
 
 jobs:
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@dc24bff2366e8ddeea5e0e4168df3d6f4b93f596 # 2026.8.8
     permissions:
       security-events: write # for github/codeql-action/*
 
   test:
     needs: tidy
+    if: github.actor != 'dependabot[bot]' || matrix.dependabot
     strategy:
       fail-fast: false
       matrix:
-        # See also https://github.com/taiki-e/rust-cross-toolchain/blob/HEAD/tools/target-list-shared.sh
         # prettier-ignore
         include:
           # Linux (GNU)
           # rustup target list | grep -F -e '-linux-gnu'
           # rustc --print target-list | grep -F -e '-linux-gnu'
-          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04 }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04, dependabot: true }
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04, package: libc6-dbg } # arm64
           - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm, package: libc6-dbg } # arm64
@@ -62,7 +59,7 @@ jobs:
           # - { target: arm-unknown-linux-gnueabihf, os: ubuntu-22.04 } # supported in rust-cross-toolchain but not ported to this action
           # - { target: arm-unknown-linux-gnueabihf, os: ubuntu-24.04 } # supported in rust-cross-toolchain but not ported to this action
           - { target: armeb-unknown-linux-gnueabi, os: ubuntu-22.04 } # tier3
-          # - { target: armeb-unknown-linux-gnueabi, os: ubuntu-24.04 } # tier3, Segmentation fault on ubuntu 24.04: https://github.com/taiki-e/setup-cross-toolchain-action/issues/1
+          # - { target: armeb-unknown-linux-gnueabi, os: ubuntu-24.04 } # tier3
           # - { target: armv4t-unknown-linux-gnueabi, os: ubuntu-22.04 } # tier3
           # - { target: armv4t-unknown-linux-gnueabi, os: ubuntu-24.04 } # tier3
           - { target: armv5te-unknown-linux-gnueabi, os: ubuntu-22.04 }
@@ -289,8 +286,8 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
         with:
           tool: rust@nightly
           fallback: none
@@ -324,7 +321,7 @@ jobs:
       - run: /system/bin/sh -c set
         if: contains(matrix.target, '-android')
       # For debugging
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}-${{ matrix.os }}
           # TODO(windows host): No files were found with the provided path: /tmp/artifacts/. No artifacts will be uploaded.
@@ -333,6 +330,7 @@ jobs:
 
   test-container:
     needs: tidy
+    if: github.actor != 'dependabot[bot]' || matrix.dependabot
     strategy:
       fail-fast: false
       matrix:
@@ -391,6 +389,7 @@ jobs:
           - x86_64-pc-windows-gnullvm
         # prettier-ignore
         include:
+          - { container: ubuntu:24.04, target: aarch64-unknown-linux-gnu, dependabot: true }
           - { container: debian:13-slim, target: armv5te-unknown-linux-gnueabi, package: libc6-dbg } # armel
           - { container: debian:13-slim, target: arm-unknown-linux-gnueabi, package: libc6-dbg } # armel
           - { container: debian:13-slim, target: armv7-unknown-linux-gnueabi, package: libc6-dbg } # armel
@@ -438,8 +437,8 @@ jobs:
           apt-get -o Acquire::Retries=10 -qq update
           apt-get -o Acquire::Retries=10 -qq -o Dpkg::Use-Pty=0 install -y --no-install-recommends ca-certificates curl
         if: startsWith(matrix.container, 'ubuntu') || startsWith(matrix.container, 'debian')
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
         with:
           tool: rust@nightly
           fallback: none
@@ -481,11 +480,13 @@ jobs:
 
   test-valgrind:
     needs: tidy
+    if: github.actor != 'dependabot[bot]' || matrix.dependabot
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
+            dependabot: true
           - target: i686-unknown-linux-gnu
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
@@ -494,8 +495,8 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/install-action@v2
         with:
           tool: rust@nightly
           fallback: none

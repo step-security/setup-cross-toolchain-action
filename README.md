@@ -3,7 +3,6 @@
 # setup-cross-toolchain-action
 
 [![release](https://img.shields.io/github/release/step-security/setup-cross-toolchain-action?style=flat-square&logo=github)](https://github.com/step-security/setup-cross-toolchain-action/releases/latest)
-[![github actions](https://img.shields.io/github/actions/workflow/status/step-security/setup-cross-toolchain-action/ci.yml?branch=main&style=flat-square&logo=github)](https://github.com/step-security/setup-cross-toolchain-action/actions)
 
 GitHub Action for setup toolchains for cross compilation and cross testing for Rust.
 
@@ -29,7 +28,6 @@ GitHub Action for setup toolchains for cross compilation and cross testing for R
   - [Mac Catalyst](#mac-catalyst)
 - [Security](#security)
 - [Compatibility](#compatibility)
-- [Related Projects](#related-projects)
 - [License](#license)
 
 ## Usage
@@ -51,7 +49,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup update stable
       - name: Install cross-compilation tools
@@ -79,7 +77,7 @@ jobs:
           - riscv64gc-unknown-linux-gnu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup update stable
       - name: Install cross-compilation tools
@@ -110,7 +108,7 @@ jobs:
           - aarch64-unknown-linux-gnu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
       - name: Install cross-compilation tools
@@ -133,7 +131,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup update nightly && rustup default nightly
       - name: Install cross-compilation tools
@@ -156,7 +154,7 @@ jobs:
           - aarch64_be-unknown-linux-gnu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Rust
         run: rustup update nightly && rustup default nightly
       - name: Install cross-compilation tools
@@ -256,7 +254,6 @@ The current default Valgrind version is 3.27.1.
 The current default arguments passed to Valgrind is `-v --error-exitcode=1 --error-limit=no --leak-check=full --track-origins=yes --fair-sched=yes --gen-suppressions=all`. You can override it by setting the `CARGO_TARGET_<target name in upper underscore format>_RUNNER` environment variable.
 
 See "test-valgrind" job in [our CI config](https://github.com/step-security/setup-cross-toolchain-action/blob/HEAD/.github/workflows/ci.yml) for basic usage with x86_64/i686/aarch64/armv7hf.
-See "valgrind-cross" job in [atomic-maybe-uninit's CI config](https://github.com/taiki-e/atomic-maybe-uninit/blob/HEAD/.github/workflows/ci.yml) for how to run tests with valgrind on powerpc64le/s390x/riscv64.
 
 ### Linux (musl)
 
@@ -562,27 +559,7 @@ container:
 
 Note that what this action installs for its setup (such as above tools) is considered an implementation detail if they are installed by this action's side, and there is no guarantee that they will be available in subsequent steps, because this action is not an action for installing those tools.
 
-## Related Projects
-
-- [rust-cross-toolchain]: Toolchains for cross compilation and cross testing for Rust.
-- [install-action]: GitHub Action for installing development tools (mainly from GitHub Releases).
-- [cache-cargo-install-action]: GitHub Action for `cargo install` with cache.
-- [create-gh-release-action]: GitHub Action for creating GitHub Releases based on changelog.
-- [upload-rust-binary-action]: GitHub Action for building and uploading Rust binary to GitHub Releases.
-- [checkout-action]: GitHub Action for checking out a repository. (Simplified actions/checkout alternative that does not depend on Node.js.)
-
-[cache-cargo-install-action]: https://github.com/taiki-e/cache-cargo-install-action
-[checkout-action]: https://github.com/taiki-e/checkout-action
-[create-gh-release-action]: https://github.com/taiki-e/create-gh-release-action
-[install-action]: https://github.com/taiki-e/install-action
-[rust-cross-toolchain]: https://github.com/taiki-e/rust-cross-toolchain
-[upload-rust-binary-action]: https://github.com/taiki-e/upload-rust-binary-action
-
 ## License
 
-Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or
-[MIT license](LICENSE-MIT) at your option.
+Licensed under [MIT license](LICENSE-MIT)
 
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall
-be dual licensed as above, without any additional terms or conditions.
